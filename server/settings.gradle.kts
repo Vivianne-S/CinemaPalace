@@ -4,27 +4,21 @@
  * The settings file is used to specify which projects to include in your build.
  * For more detailed information on multi-project builds, please refer to https://docs.gradle.org/8.10.2/userguide/multi_project_builds.html in the Gradle documentation.
  */
-
-rootProject.name = "server"
-plugins {
-    id("org.jetbrains.kotlin.jvm")
-    application
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        google()
+    }
 }
 
-repositories {
-    mavenCentral()
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+        google()
+    }
 }
 
-dependencies {
-    implementation("io.ktor:ktor-server-core:2.3.9")
-    implementation("io.ktor:ktor-server-netty:2.3.9")
-    implementation("ch.qos.logback:logback-classic:1.4.14")
-}
-
-application {
-    mainClass.set("com.cinemapalace.ApplicationKt")
-}
-
-kotlin {
-    jvmToolchain(17)
-}
+rootProject.name = "CinemaPalace"
+include(":server")

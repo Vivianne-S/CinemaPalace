@@ -1,21 +1,51 @@
-package com.cinemapalace.repository
+package com.cinemapalace.auth
 
 import com.cinemapalace.model.User
-import java.util.concurrent.ConcurrentHashMap
-import java.util.UUID
+import com.cinemapalace.database.UsersTable
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.transactions.transaction
+import org.mindrot.jbcrypt.BCrypt
+import java.util.*
 
-object UserRepository {
-    private val users = ConcurrentHashMap<String, User>()
+class UserRepository {
 
-    fun register(name: String, email: String, password: String): User {
-        val id = UUID.randomUUID().toString()
-        val user = User(id, name, email, password)
-        users[email] = user
-        return user
+    // Skapa ny användare
+    fun createUser(name: String, email: String, password: String): User {
+        val hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt())
+        val userId = UUID.randomUUID().toString()
+
+        transaction {
+            UsersTable.insert {
+                it[id] = userId
+                it[UsersTable.name] = name
+                it[UsersTable.email] = email
+                it[UsersTable.password] = hashedPassword
+            }
+        }
+
+        return User(userId, name, email, hashedPassword)
     }
 
-    fun login(email: String, password: String): User? {
-        val user = users[email]
-        return if (user != null && user.password == password) user else null
+    // Hitta användare via email
+    fun findByEmail(email: String): User? {
+        return transaction {
+            UsersTable.selectAll()
+                .where { UsersTable.email eq email }
+                .map {
+                    User(
+                        it[UsersTable.id],
+                        it[UsersTable.name],
+                        it[UsersTable.email],
+                        it[UsersTable.password]
+                    )
+                }
+                .singleOrNull()
+        }
+    }
+
+    // Validera login
+    fun validateUser(email: String, password: String): User? {
+        val user = findByEmail(email)
+        return if (user != null && BCrypt.checkpw(password, user.password)) user else null
     }
 }
