@@ -1,29 +1,50 @@
 package com.cinemapalace
 
+import com.cinemapalace.auth.authRoutes
 import com.cinemapalace.model.Movie
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.contentnegotiation.*
-import io.ktor.serialization.jackson.*
 import io.ktor.server.response.*
+import io.ktor.server.request.*
 import io.ktor.server.routing.*
+import io.ktor.server.plugins.contentnegotiation.*
+import com.fasterxml.jackson.databind.SerializationFeature
+import io.ktor.serialization.jackson.*
+
+// 🔹 En enkel lista i minnet där vi sparar filmer
+val movies = mutableListOf(
+    Movie("1", "Inception", "Dream within a dream", 2010),
+    Movie("2", "Interstellar", "Love & gravity", 2014),
+    Movie("3", "Dune: Part One", "Arrakis och kryddan", 2021)
+)
 
 fun main() {
     embeddedServer(Netty, port = 8080) {
-        install(ContentNegotiation) { jackson() }
+        install(ContentNegotiation) {
+            jackson {
+                disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            }
+        }
 
         routing {
+            // Health check
             get("/ping") { call.respondText("pong") }
 
+            // Hämta alla filmer
             get("/movies") {
-                val movies = listOf(
-                    Movie("1", "Inception", "Dream within a dream", 2010),
-                    Movie("2", "Interstellar", "Love & gravity", 2014),
-                    Movie("3", "Dune: Part One", "Arrakis och kryddan", 2021)
-                )
                 call.respond(movies)
             }
+
+            // Lägg till en ny film
+            post("/movies") {
+                val movie = call.receive<Movie>()
+                movies.add(movie)
+                call.respond(mapOf("message" to "Movie added!", "movie" to movie))
+            }
+
+            // Auth endpoints
+            authRoutes()
         }
     }.start(wait = true)
 }
