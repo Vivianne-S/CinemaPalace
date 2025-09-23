@@ -2,6 +2,7 @@ package com.cinemapalace
 
 import com.cinemapalace.auth.authRoutes
 import com.cinemapalace.model.Movie
+import com.cinemapalace.database.DatabaseFactory
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -21,6 +22,9 @@ val movies = mutableListOf(
 
 fun main() {
     embeddedServer(Netty, port = 8080) {
+        // Initiera SQLite
+        DatabaseFactory.init()
+
         install(ContentNegotiation) {
             jackson {
                 disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
@@ -43,7 +47,7 @@ fun main() {
                 call.respond(mapOf("message" to "Movie added!", "movie" to movie))
             }
 
-            // Auth endpoints
+            // 🔹 Auth endpoints (nu korrekt inuti routing)
             authRoutes()
         }
     }.start(wait = true)
