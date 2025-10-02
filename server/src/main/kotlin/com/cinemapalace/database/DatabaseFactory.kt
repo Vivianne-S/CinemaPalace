@@ -13,20 +13,22 @@ object DatabaseFactory {
         )
 
         transaction {
-            // Skapa alla tabeller vi använder i systemet
+            // Skapa alla tabeller i rätt ordning
             SchemaUtils.create(
                 UsersTable,
-                BookingsTable,
-                TheatersTable,   // 👈 viktig: avsluta med komma
-                ShowtimesTable   // 👈 nu fungerar det
+                TheatersTable,
+                ShowtimesTable,
+                HallsTable,
+                SeatsTable,
+                SeatBookingsTable
             )
         }
 
         println("✅ Database connected with Exposed: ${config.url}")
-        println("✅ Users, Bookings, Theaters & Showtimes tables created/verified")
+        println("✅ Users, Theaters, Showtimes, Halls, Seats & SeatBookings tables created/verified")
     }
 
-    // kvar för kompatibilitet (dev)
+    // fallback för dev
     fun init() {
         init(DatabaseConfig("jdbc:sqlite:./cinemapalace.db"))
     }
