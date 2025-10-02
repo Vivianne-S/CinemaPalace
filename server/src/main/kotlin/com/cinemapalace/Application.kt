@@ -21,6 +21,7 @@ import io.ktor.server.routing.*
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.cinemapalace.api.bookingRoutes
+import com.cinemapalace.api.theaterRoutes
 
 fun main() {
     // 🔹 Ladda miljövariabler från .env
@@ -83,7 +84,8 @@ fun Application.module() {
         get("/health") {
             call.respond(mapOf("status" to "healthy"))
         }
-
+// Biograf-routes
+        theaterRoutes()
         // 🎬 TMDB-routes
         movieRoutes(appConfig.tmdb, client)
 

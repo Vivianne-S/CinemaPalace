@@ -13,12 +13,16 @@ object DatabaseFactory {
         )
 
         transaction {
-            // Skapa båda tabellerna
-            SchemaUtils.create(UsersTable, BookingsTable)
+            // Skapa alla tabeller vi använder i systemet
+            SchemaUtils.create(
+                UsersTable,
+                BookingsTable,
+                TheatersTable // ✅ Ny tabell för biografer
+            )
         }
 
         println("✅ Database connected with Exposed: ${config.url}")
-        println("✅ Users & Bookings tables created/verified")
+        println("✅ Users, Bookings & Theaters tables created/verified")
     }
 
     // kvar för kompatibilitet (dev)
