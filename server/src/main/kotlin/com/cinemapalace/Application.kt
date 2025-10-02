@@ -2,6 +2,8 @@ package com.cinemapalace
 
 import com.cinemapalace.api.movieRoutes
 import com.cinemapalace.api.authRoutes
+import com.cinemapalace.api.bookingRoutes
+import com.cinemapalace.api.theaterRoutes
 import com.cinemapalace.config.AppConfig
 import com.cinemapalace.database.DatabaseFactory
 import com.fasterxml.jackson.databind.DeserializationFeature
@@ -20,8 +22,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
-import com.cinemapalace.api.bookingRoutes
-import com.cinemapalace.api.theaterRoutes
+import com.cinemapalace.api.showtimeRoutes
 
 fun main() {
     // 🔹 Ladda miljövariabler från .env
@@ -36,6 +37,7 @@ fun main() {
         module()
     }.start(wait = true)
 }
+
 fun Application.module() {
     val appConfig = AppConfig.fromApplicationConfig(environment.config)
 
@@ -86,20 +88,20 @@ fun Application.module() {
         }
 // Biograf-routes
         theaterRoutes()
-        // 🎬 TMDB-routes
+
+// 🕒 Showtime-routes
+        showtimeRoutes()
+
+// 🎬 TMDB-routes
         movieRoutes(appConfig.tmdb, client)
 
-        // 🔑 Auth-routes (register & login)
+// 🔑 Auth-routes
         route("/auth") {
             authRoutes(appConfig.jwt)
-
-            // 🔹 Test route för att dubbelkolla att /auth blocket funkar
-            get("/ping") {
-                call.respond(mapOf("status" to "auth alive"))
-            }
+            get("/ping") { call.respond(mapOf("status" to "auth alive")) }
         }
 
-        // 🎟️ Booking-routes (ligger nu direkt på /bookings)
+// 🎟️ Booking-routes
         bookingRoutes()
     }
 }
