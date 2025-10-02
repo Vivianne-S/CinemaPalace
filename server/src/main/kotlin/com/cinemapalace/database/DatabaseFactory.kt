@@ -13,7 +13,7 @@ object DatabaseFactory {
             driver = "org.sqlite.JDBC"
         )
 
-        // Skapa tabeller med din befintliga UsersTable
+        // Skapa tabeller (just nu bara Users, men fler kommer: Cinemas, Movies, Screenings, Bookings)
         transaction {
             SchemaUtils.create(UsersTable)
         }
@@ -22,7 +22,7 @@ object DatabaseFactory {
         println("✅ Users table created/verified")
     }
 
-    // Behåll den gamla för kompatibilitet
+    // 🔹 fallback om ingen config skickas
     fun init() {
         init(DatabaseConfig("jdbc:sqlite:./cinemapalace.db"))
     }
