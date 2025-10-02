@@ -24,5 +24,18 @@ fun Route.theaterRoutes() {
             val theater = repo.create(req.name, req.city)
             call.respond(theater)
         }
+        put("/{id}") {
+            val id = call.parameters["id"] ?: return@put call.respond(mapOf("error" to "Missing id"))
+            val req = call.receive<CreateTheaterRequest>()
+            val updated = repo.update(id, req.name, req.city)
+            if (updated != null) call.respond(updated)
+            else call.respond(mapOf("error" to "Not found"))
+        }
+        delete("/{id}") {
+            val id = call.parameters["id"] ?: return@delete call.respond(mapOf("error" to "Missing id"))
+            val deleted = repo.delete(id)
+            if (deleted) call.respond(mapOf("status" to "deleted", "id" to id))
+            else call.respond(mapOf("status" to "not found", "id" to id))
+        }
     }
 }

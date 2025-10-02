@@ -89,9 +89,6 @@ fun Application.module() {
 // Biograf-routes
         theaterRoutes()
 
-//  Showtime-routes
-        showtimeRoutes()
-
 //  TMDB-routes
         movieRoutes(appConfig.tmdb, client)
 
@@ -101,7 +98,8 @@ fun Application.module() {
             get("/ping") { call.respond(mapOf("status" to "auth alive")) }
         }
 //  Showtimes-routes
-        showtimeRoutes()
+        showtimeRoutes(appConfig.tmdb, client)
+
 //  Booking-routes
         bookingRoutes()
     }
