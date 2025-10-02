@@ -16,20 +16,16 @@ fun Route.showtimeRoutes() {
             val showtime = repo.create(req.theaterId, req.movieId, req.hall, req.startTime)
             call.respond(showtime)
         }
+    }
 
+    // 🎬 Hämta alla föreställningar för en specifik biograf
+    route("/theaters/{id}/showtimes") {
         get {
-            call.respond(repo.list())
-        }
+            val theaterId = call.parameters["id"]
+                ?: return@get call.respond(mapOf("error" to "Missing theater id"))
 
-        get("/{id}") {
-            val id = call.parameters["id"] ?: return@get call.respond(mapOf("error" to "Missing id"))
-            val showtime = repo.get(id) ?: return@get call.respond(mapOf("error" to "Not found"))
-            call.respond(showtime)
-        }
-
-        get("/theater/{theaterId}") {
-            val theaterId = call.parameters["theaterId"] ?: return@get call.respond(mapOf("error" to "Missing theaterId"))
-            call.respond(repo.listByTheater(theaterId))
+            val showtimes = repo.forTheater(theaterId)
+            call.respond(showtimes)
         }
     }
 }

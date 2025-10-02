@@ -89,19 +89,20 @@ fun Application.module() {
 // Biograf-routes
         theaterRoutes()
 
-// 🕒 Showtime-routes
+//  Showtime-routes
         showtimeRoutes()
 
-// 🎬 TMDB-routes
+//  TMDB-routes
         movieRoutes(appConfig.tmdb, client)
 
-// 🔑 Auth-routes
+//  Auth-routes
         route("/auth") {
             authRoutes(appConfig.jwt)
             get("/ping") { call.respond(mapOf("status" to "auth alive")) }
         }
-
-// 🎟️ Booking-routes
+//  Showtimes-routes
+        showtimeRoutes()
+//  Booking-routes
         bookingRoutes()
     }
 }

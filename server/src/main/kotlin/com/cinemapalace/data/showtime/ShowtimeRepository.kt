@@ -27,18 +27,10 @@ class ShowtimeRepository {
         Showtime(id, theaterId, movieId, hall, startTime)
     }
 
-    fun list(): List<Showtime> = transaction {
-        ShowtimesTable.selectAll().map(::rowToShowtime)
-    }
-
-    fun listByTheater(theaterId: String): List<Showtime> = transaction {
-        ShowtimesTable.select { ShowtimesTable.theaterId eq theaterId }
+    fun forTheater(theaterId: String): List<Showtime> = transaction {
+        ShowtimesTable
+            .select { ShowtimesTable.theaterId eq theaterId }
+            .orderBy(ShowtimesTable.startTime, SortOrder.ASC)
             .map(::rowToShowtime)
-    }
-
-    fun get(id: String): Showtime? = transaction {
-        ShowtimesTable.select { ShowtimesTable.id eq id }
-            .map(::rowToShowtime)
-            .singleOrNull()
     }
 }
