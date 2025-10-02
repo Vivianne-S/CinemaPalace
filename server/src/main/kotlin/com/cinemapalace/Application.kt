@@ -2,8 +2,10 @@ package com.cinemapalace
 
 import com.cinemapalace.api.movieRoutes
 import com.cinemapalace.api.authRoutes
-import com.cinemapalace.api.bookingRoutes
 import com.cinemapalace.api.theaterRoutes
+import com.cinemapalace.api.showtimeRoutes
+import com.cinemapalace.api.seatBookingRoutes
+import com.cinemapalace.api.hallRoutes
 import com.cinemapalace.config.AppConfig
 import com.cinemapalace.database.DatabaseFactory
 import com.fasterxml.jackson.databind.DeserializationFeature
@@ -22,7 +24,6 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
-import com.cinemapalace.api.showtimeRoutes
 
 fun main() {
     // 🔹 Ladda miljövariabler från .env
@@ -86,21 +87,24 @@ fun Application.module() {
         get("/health") {
             call.respond(mapOf("status" to "healthy"))
         }
-// Biograf-routes
+
+        // Biograf-routes
         theaterRoutes()
 
-//  TMDB-routes
+        // TMDB-routes
         movieRoutes(appConfig.tmdb, client)
 
-//  Auth-routes
+        // Auth-routes
         route("/auth") {
             authRoutes(appConfig.jwt)
             get("/ping") { call.respond(mapOf("status" to "auth alive")) }
         }
-//  Showtimes-routes
+
+        // Showtimes-routes
         showtimeRoutes(appConfig.tmdb, client)
 
-//  Booking-routes
-        bookingRoutes()
+        // Filmstaden-style routes
+        hallRoutes()
+        seatBookingRoutes()
     }
 }
