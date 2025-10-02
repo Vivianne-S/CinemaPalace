@@ -1,6 +1,7 @@
 package com.cinemapalace
 
 import com.cinemapalace.api.movieRoutes
+import com.cinemapalace.api.authRoutes
 import com.cinemapalace.config.AppConfig
 import com.cinemapalace.database.DatabaseFactory
 import com.fasterxml.jackson.databind.DeserializationFeature
@@ -21,7 +22,7 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 
 fun main() {
-    // 🔹 Ladda .env
+    // 🔹 Ladda miljövariabler från .env
     val dotenv = dotenv {
         ignoreIfMissing = true
     }
@@ -58,7 +59,7 @@ fun Application.module() {
         }
     }
 
-    // ✅ JWT (för bokningar & auth)
+    // ✅ JWT Authentication
     install(Authentication) {
         jwt("auth-jwt") {
             realm = appConfig.jwt.realm
@@ -83,6 +84,17 @@ fun Application.module() {
             call.respond(mapOf("status" to "healthy"))
         }
 
+        // 🎬 TMDB-routes
         movieRoutes(appConfig.tmdb, client)
+
+        // 🔑 Auth-routes (register & login)
+        route("/auth") {
+            authRoutes(appConfig.jwt)
+
+            // 🔹 Test route för att dubbelkolla att /auth blocket funkar
+            get("/ping") {
+                call.respond(mapOf("status" to "auth alive"))
+            }
+        }
     }
 }

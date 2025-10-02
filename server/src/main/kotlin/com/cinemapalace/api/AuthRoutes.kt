@@ -3,11 +3,10 @@ package com.cinemapalace.api
 import com.cinemapalace.config.JwtConfig
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
-import com.cinemapalace.domain.models.AuthResponse
-import com.cinemapalace.domain.models.LoginRequest
-import com.cinemapalace.domain.models.RegisterRequest
 import com.cinemapalace.data.auth.UserRepository
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -40,7 +39,6 @@ fun Route.authRoutes(jwtConfig: JwtConfig) {
             return@post
         }
 
-        // 🔑 Skapa JWT-token
         val token = JWT.create()
             .withAudience(jwtConfig.audience)
             .withIssuer(jwtConfig.issuer)
@@ -49,6 +47,32 @@ fun Route.authRoutes(jwtConfig: JwtConfig) {
             .sign(Algorithm.HMAC256(jwtConfig.secret))
 
         call.respond(AuthResponse(token, "Login successful"))
+    }
+
+    // ✅ Authenticated route
+    authenticate("auth-jwt") {
+        get("/me") {
+            val principal = call.principal<JWTPrincipal>()
+            val userId = principal?.payload?.getClaim("userId")?.asString()
+
+            if (userId == null) {
+                call.respond(AuthResponse(null, "No valid token"))
+                return@get
+            }
+
+            val user = userRepository.findById(userId)
+            if (user == null) {
+                call.respond(AuthResponse(null, "User not found"))
+            } else {
+                call.respond(
+                    mapOf(
+                        "id" to user.id,
+                        "name" to user.name,
+                        "email" to user.email
+                    )
+                )
+            }
+        }
     }
 }
 
