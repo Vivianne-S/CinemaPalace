@@ -17,12 +17,13 @@ object DatabaseFactory {
             SchemaUtils.create(
                 UsersTable,
                 BookingsTable,
-                TheatersTable // ✅ Ny tabell för biografer
+                TheatersTable,   // 👈 viktig: avsluta med komma
+                ShowtimesTable   // 👈 nu fungerar det
             )
         }
 
         println("✅ Database connected with Exposed: ${config.url}")
-        println("✅ Users, Bookings & Theaters tables created/verified")
+        println("✅ Users, Bookings, Theaters & Showtimes tables created/verified")
     }
 
     // kvar för kompatibilitet (dev)
