@@ -7,22 +7,21 @@ import org.jetbrains.exposed.sql.transactions.transaction
 
 object DatabaseFactory {
     fun init(config: DatabaseConfig) {
-        // Anslut till databasen med Exposed
         Database.connect(
             url = config.url,
             driver = "org.sqlite.JDBC"
         )
 
-        // Skapa tabeller (just nu bara Users, men fler kommer: Cinemas, Movies, Screenings, Bookings)
         transaction {
-            SchemaUtils.create(UsersTable)
+            // Skapa båda tabellerna
+            SchemaUtils.create(UsersTable, BookingsTable)
         }
 
         println("✅ Database connected with Exposed: ${config.url}")
-        println("✅ Users table created/verified")
+        println("✅ Users & Bookings tables created/verified")
     }
 
-    // 🔹 fallback om ingen config skickas
+    // kvar för kompatibilitet (dev)
     fun init() {
         init(DatabaseConfig("jdbc:sqlite:./cinemapalace.db"))
     }

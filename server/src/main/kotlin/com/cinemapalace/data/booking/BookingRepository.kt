@@ -1,60 +1,55 @@
 package com.cinemapalace.data.booking
 
 import com.cinemapalace.database.BookingsTable
-import com.cinemapalace.domain.models.BookingDto
-import com.cinemapalace.data.screening.ScreeningRepository
+import com.cinemapalace.domain.models.Booking
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 
-private fun List<String>.toCsv(): String = this.joinToString(",")
+class BookingRepository {
 
-class BookingRepository(
-    private val screeningRepo: ScreeningRepository = ScreeningRepository()
-) {
-    fun create(userId: String, screeningId: String, seats: List<String>): BookingDto {
-        require(seats.isNotEmpty()) { "No seats provided" }
-        val seatSet = seats.map { it.trim().uppercase() }.toSet()
+    private val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
-        // Validations + update screening
-        if (!screeningRepo.seatsAvailable(screeningId, seatSet)) {
-            throw IllegalStateException("One or more seats are already booked")
+    private fun rowToBooking(row: ResultRow): Booking =
+        Booking(
+            id = row[BookingsTable.id],
+            userId = row[BookingsTable.userId],
+            movieId = row[BookingsTable.movieId],
+            seats = row[BookingsTable.seats].split(",").filter { it.isNotBlank() },
+            showtime = row[BookingsTable.showtime],
+            createdAt = row[BookingsTable.createdAt]
+        )
+
+    // ✅ Bytte namn till createBooking så att den matchar i bookingRoutes
+    fun createBooking(userId: String, movieId: Int, seats: List<String>, showtime: String): Booking = transaction {
+        val id = UUID.randomUUID().toString()
+        val createdAt = LocalDateTime.now().format(formatter)
+        val seatsStr = seats.joinToString(",")
+
+        BookingsTable.insert {
+            it[BookingsTable.id] = id
+            it[BookingsTable.userId] = userId
+            it[BookingsTable.movieId] = movieId
+            it[BookingsTable.seats] = seatsStr
+            it[BookingsTable.showtime] = showtime
+            it[BookingsTable.createdAt] = createdAt
         }
-        screeningRepo.appendBookedSeats(screeningId, seatSet)
 
-        // Create booking
-        return transaction {
-            val id = UUID.randomUUID().toString()
-            val now = LocalDateTime.now()
-            BookingsTable.insert {
-                it[BookingsTable.id] = id
-                it[BookingsTable.userId] = userId
-                it[BookingsTable.screeningId] = screeningId
-                it[BookingsTable.seatsCsv] = seats.toCsv()
-                it[BookingsTable.createdAt] = now
-            }
-            BookingDto(
-                id = id,
-                screeningId = screeningId,
-                userId = userId,
-                seats = seats,
-                createdAt = now
-            )
-        }
+        Booking(id, userId, movieId, seats, showtime, createdAt)
     }
 
-    fun listByUser(userId: String): List<BookingDto> = transaction {
-        BookingsTable.select { BookingsTable.userId eq userId }
-            .orderBy(BookingsTable.createdAt to SortOrder.DESC)
-            .map { row ->
-                BookingDto(
-                    id = row[BookingsTable.id],
-                    screeningId = row[BookingsTable.screeningId],
-                    userId = row[BookingsTable.userId],
-                    seats = row[BookingsTable.seatsCsv].split(",").filter { it.isNotBlank() },
-                    createdAt = row[BookingsTable.createdAt]
-                )
-            }
+    fun forUser(userId: String): List<Booking> = transaction {
+        BookingsTable
+            .select { BookingsTable.userId eq userId }
+            .orderBy(BookingsTable.createdAt, SortOrder.DESC)
+            .map(::rowToBooking)
+    }
+
+    fun delete(id: String, ownerId: String): Boolean = transaction {
+        val rows = BookingsTable.deleteWhere { (BookingsTable.id eq id) and (BookingsTable.userId eq ownerId) }
+        rows > 0
     }
 }

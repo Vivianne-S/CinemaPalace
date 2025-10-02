@@ -20,6 +20,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import com.cinemapalace.api.bookingRoutes
 
 fun main() {
     // 🔹 Ladda miljövariabler från .env
@@ -34,7 +35,6 @@ fun main() {
         module()
     }.start(wait = true)
 }
-
 fun Application.module() {
     val appConfig = AppConfig.fromApplicationConfig(environment.config)
 
@@ -96,5 +96,8 @@ fun Application.module() {
                 call.respond(mapOf("status" to "auth alive"))
             }
         }
+
+        // 🎟️ Booking-routes (ligger nu direkt på /bookings)
+        bookingRoutes()
     }
 }
