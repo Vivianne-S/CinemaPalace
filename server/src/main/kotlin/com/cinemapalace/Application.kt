@@ -1,54 +1,88 @@
 package com.cinemapalace
 
-import com.cinemapalace.auth.authRoutes
-import com.cinemapalace.model.Movie
+import com.cinemapalace.api.movieRoutes
+import com.cinemapalace.config.AppConfig
 import com.cinemapalace.database.DatabaseFactory
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.SerializationFeature
+import io.github.cdimascio.dotenv.dotenv
+import io.ktor.client.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.response.*
-import io.ktor.server.request.*
-import io.ktor.server.routing.*
 import io.ktor.server.plugins.contentnegotiation.*
-import com.fasterxml.jackson.databind.SerializationFeature
-import io.ktor.serialization.jackson.*
-
-// 🔹 En enkel lista i minnet där vi sparar filmer
-val movies = mutableListOf(
-    Movie("1", "Inception", "Dream within a dream", 2010),
-    Movie("2", "Interstellar", "Love & gravity", 2014),
-    Movie("3", "Dune: Part One", "Arrakis och kryddan", 2021)
-)
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import com.auth0.jwt.JWT
+import com.auth0.jwt.algorithms.Algorithm
 
 fun main() {
+    // 🔹 Ladda .env
+    val dotenv = dotenv {
+        ignoreIfMissing = true
+    }
+    dotenv.entries().forEach { entry ->
+        System.setProperty(entry.key, entry.value)
+    }
+
     embeddedServer(Netty, port = 8080) {
-        // Initiera SQLite
-        DatabaseFactory.init()
-
-        install(ContentNegotiation) {
-            jackson {
-                disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            }
-        }
-
-        routing {
-            // Health check
-            get("/ping") { call.respondText("pong") }
-
-            // Hämta alla filmer
-            get("/movies") {
-                call.respond(movies)
-            }
-
-            // Lägg till en ny film
-            post("/movies") {
-                val movie = call.receive<Movie>()
-                movies.add(movie)
-                call.respond(mapOf("message" to "Movie added!", "movie" to movie))
-            }
-
-            // 🔹 Auth endpoints (nu korrekt inuti routing)
-            authRoutes()
-        }
+        module()
     }.start(wait = true)
+}
+
+fun Application.module() {
+    val appConfig = AppConfig.fromApplicationConfig(environment.config)
+
+    // ✅ Init DB
+    DatabaseFactory.init(appConfig.database)
+
+    // ✅ HttpClient för TMDB
+    val client = HttpClient {
+        install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
+            jackson {
+                configure(SerializationFeature.INDENT_OUTPUT, true)
+                configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            }
+        }
+    }
+
+    // ✅ Serverns ContentNegotiation
+    install(ContentNegotiation) {
+        jackson {
+            disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        }
+    }
+
+    // ✅ JWT (för bokningar & auth)
+    install(Authentication) {
+        jwt("auth-jwt") {
+            realm = appConfig.jwt.realm
+            verifier(
+                JWT
+                    .require(Algorithm.HMAC256(appConfig.jwt.secret))
+                    .withAudience(appConfig.jwt.audience)
+                    .withIssuer(appConfig.jwt.issuer)
+                    .build()
+            )
+            validate { credential ->
+                if (credential.payload.getClaim("userId").asString().isNotEmpty()) {
+                    JWTPrincipal(credential.payload)
+                } else null
+            }
+        }
+    }
+
+    // ✅ Routing
+    routing {
+        get("/health") {
+            call.respond(mapOf("status" to "healthy"))
+        }
+
+        movieRoutes(appConfig.tmdb, client)
+    }
 }

@@ -1,4 +1,4 @@
-package com.cinemapalace.model
+package com.cinemapalace.domain.models
 
 data class User(
     val id: String,

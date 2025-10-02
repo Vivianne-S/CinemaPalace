@@ -3,3 +3,15 @@
 
 # Ignore Gradle build output directory
 build
+# Environment variables
+.env
+*.env
+
+# Database files
+*.db
+*.sqlite
+cinemapalace.db
+
+# Log files
+logs/
+*.log
