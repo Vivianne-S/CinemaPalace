@@ -5,8 +5,9 @@ import com.cinemapalace.domain.models.Showtime
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 
-class ShowtimeRepository {
+class ShowtimesRepository {
     private fun rowToShowtime(row: ResultRow) = Showtime(
         id = row[ShowtimesTable.id],
         theaterId = row[ShowtimesTable.theaterId],
@@ -27,18 +28,22 @@ class ShowtimeRepository {
         Showtime(id, theaterId, movieId, hall, startTime)
     }
 
-    fun list(): List<Showtime> = transaction {
-        ShowtimesTable.selectAll().map(::rowToShowtime)
-    }
-
-    fun listByTheater(theaterId: String): List<Showtime> = transaction {
-        ShowtimesTable.select { ShowtimesTable.theaterId eq theaterId }
+    fun forTheater(theaterId: String): List<Showtime> = transaction {
+        ShowtimesTable
+            .select { ShowtimesTable.theaterId eq theaterId }
+            .orderBy(ShowtimesTable.startTime, SortOrder.ASC)
             .map(::rowToShowtime)
     }
 
-    fun get(id: String): Showtime? = transaction {
-        ShowtimesTable.select { ShowtimesTable.id eq id }
+    fun listAll(): List<Showtime> = transaction {
+        ShowtimesTable
+            .selectAll()
+            .orderBy(ShowtimesTable.startTime, SortOrder.ASC)
             .map(::rowToShowtime)
-            .singleOrNull()
+    }
+
+    fun delete(id: String): Boolean = transaction {
+        val rowsDeleted = ShowtimesTable.deleteWhere { ShowtimesTable.id eq id }
+        rowsDeleted > 0
     }
 }
