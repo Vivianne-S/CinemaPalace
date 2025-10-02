@@ -1,4 +1,4 @@
-package com.cinemapalace.auth
+package com.cinemapalace.domain.models
 
 data class RegisterRequest(
     val name: String,

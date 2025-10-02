@@ -10,6 +10,11 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
+
+    // ✅ LÄGG TILL DETTA för att fixa plugin konflikten
+    plugins {
+        id("org.jetbrains.kotlin.jvm") version "1.9.0"
+    }
 }
 
 dependencyResolutionManagement {
