@@ -25,11 +25,6 @@ data class CreateScreeningRequest(
     val totalSeats: Int = 60
 )
 
-data class CreateBookingRequest(
-    val screeningId: String,
-    val seats: List<String>
-)
-
 data class BookingDto(
     val id: String,
     val screeningId: String,
