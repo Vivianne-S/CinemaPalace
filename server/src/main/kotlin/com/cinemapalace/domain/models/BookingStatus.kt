@@ -4,6 +4,7 @@ enum class BookingStatus(val value: String) {
     FREE("FREE"),
     RESERVED("RESERVED"),
     BOOKED("BOOKED"),
+    CONFIRMED("CONFIRMED"),
     CANCELLED("CANCELLED");
 
     companion object {
