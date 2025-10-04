@@ -24,6 +24,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import com.cinemapalace.api.seatSelectionRoutes
 
 fun main() {
     // 🔹 Ladda miljövariabler från .env
@@ -106,5 +107,6 @@ fun Application.module() {
         // Filmstaden-style routes
         hallRoutes()
         seatBookingRoutes()
+        seatSelectionRoutes()
     }
 }
