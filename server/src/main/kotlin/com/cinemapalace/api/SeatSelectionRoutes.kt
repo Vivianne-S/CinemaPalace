@@ -9,11 +9,10 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.deleteWhere
 
 // 🔹 Request-modell för att reservera flera platser
 data class ReserveSeatsRequest(
@@ -88,12 +87,9 @@ fun Route.seatSelectionRoutes() {
                 return@get
             }
 
-            val status = seatRepo.getBookingStatus(bookingId)
-            if (status != null) {
-                call.respond(mapOf("bookingId" to bookingId, "status" to status.value))
-            } else {
-                call.respond(HttpStatusCode.NotFound, mapOf("error" to "Booking not found"))
-            }
+            val booking = seatRepo.getBookingDetails(bookingId)
+            if (booking != null) call.respond(booking)
+            else call.respond(HttpStatusCode.NotFound, mapOf("error" to "Booking not found"))
         }
 
         // ✅ GET – endast lediga platser för en viss showtime
@@ -106,6 +102,18 @@ fun Route.seatSelectionRoutes() {
 
             val availableSeats = seatRepo.getAvailableSeats(showtimeId)
             call.respond(availableSeats)
+        }
+
+        // ✅ GET – hämta alla bokningar för en viss användare
+        get("/status/all/{userId}") {
+            val userId = call.parameters["userId"]
+            if (userId == null) {
+                call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Missing userId"))
+                return@get
+            }
+
+            val bookings = seatRepo.getBookingsByUser(userId)
+            call.respond(bookings)
         }
 
         // ✅ DELETE – ta bort en specifik bokning permanent
@@ -133,12 +141,7 @@ fun Route.seatSelectionRoutes() {
                 SeatBookingsTable.deleteWhere { SeatBookingsTable.status eq BookingStatus.CANCELLED.value }
             }
 
-            call.respond(
-                mapOf(
-                    "message" to "Cleanup complete",
-                    "deletedCount" to deletedCount
-                )
-            )
+            call.respond(mapOf("message" to "Cleanup complete", "deletedCount" to deletedCount))
         }
     }
 

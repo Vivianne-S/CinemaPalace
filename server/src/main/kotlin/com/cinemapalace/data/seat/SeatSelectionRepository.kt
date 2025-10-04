@@ -9,13 +9,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 
 class SeatSelectionRepository {
 
-    /**
-     * Hämtar alla platser för en given showtime och sätter aktuell status:
-     *  - CONFIRMED  → BOOKED
-     *  - RESERVED   → RESERVED
-     *  - CANCELLED  → FREE
-     *  - ingen bokning → FREE
-     */
+    /** ✅ Hämtar alla platser för en given showtime och sätter aktuell status */
     fun getSeatsWithStatus(showtimeId: String): List<SeatWithStatus> = transaction {
         val allSeats = SeatsTable.selectAll().map {
             SeatWithStatus(
@@ -48,15 +42,23 @@ class SeatSelectionRepository {
         }
     }
 
-    /** Hämta status för en specifik bokning */
-    fun getBookingStatus(bookingId: String): BookingStatus? = transaction {
+    /** ✅ Hämta full info om en specifik bokning */
+    fun getBookingDetails(bookingId: String): Map<String, Any?>? = transaction {
         SeatBookingsTable
             .select { SeatBookingsTable.id eq bookingId }
-            .map { BookingStatus.from(it[SeatBookingsTable.status]) }
+            .map {
+                mapOf(
+                    "bookingId" to it[SeatBookingsTable.id],
+                    "showtimeId" to it[SeatBookingsTable.showtimeId],
+                    "seatId" to it[SeatBookingsTable.seatId],
+                    "userId" to it[SeatBookingsTable.userId],
+                    "status" to it[SeatBookingsTable.status]
+                )
+            }
             .firstOrNull()
     }
 
-    /** Avbokar en plats (ändrar status → CANCELLED) */
+    /** ✅ Avbokar en plats (ändrar status → CANCELLED) */
     fun cancelBooking(bookingId: String): Boolean = transaction {
         val updated = SeatBookingsTable.update({ SeatBookingsTable.id eq bookingId }) {
             it[status] = BookingStatus.CANCELLED.value
@@ -64,9 +66,27 @@ class SeatSelectionRepository {
         updated > 0
     }
 
-    /** Hämta endast lediga platser för en given showtime */
+    /** ✅ Hämta endast lediga platser för en given showtime */
     fun getAvailableSeats(showtimeId: String): List<SeatWithStatus> {
         return getSeatsWithStatus(showtimeId)
             .filter { it.status == BookingStatus.FREE }
+    }
+
+    /** ✅ Hämta alla bokningar för en specifik användare */
+    fun getBookingsByUser(userId: String): List<Map<String, Any>> = transaction {
+        val results = SeatBookingsTable
+            .select { SeatBookingsTable.userId.lowerCase() eq userId.lowercase() }
+            .map {
+                mapOf(
+                    "bookingId" to it[SeatBookingsTable.id],
+                    "showtimeId" to it[SeatBookingsTable.showtimeId],
+                    "seatId" to it[SeatBookingsTable.seatId],
+                    "userId" to it[SeatBookingsTable.userId],
+                    "status" to it[SeatBookingsTable.status]
+                )
+            }
+
+        println("🧩 DEBUG: Hittade ${results.size} bokningar för userId=$userId")
+        results
     }
 }
