@@ -12,20 +12,20 @@ class ShowtimesRepository {
         id = row[ShowtimesTable.id],
         theaterId = row[ShowtimesTable.theaterId],
         movieId = row[ShowtimesTable.movieId],
-        hall = row[ShowtimesTable.hall],
+        hallId = row[ShowtimesTable.hallId],   // ✅ hallId istället för hall
         startTime = row[ShowtimesTable.startTime]
     )
 
-    fun create(theaterId: String, movieId: Int, hall: String, startTime: String): Showtime = transaction {
+    fun create(theaterId: String, movieId: Int, hallId: String, startTime: String): Showtime = transaction {
         val id = UUID.randomUUID().toString()
         ShowtimesTable.insert {
             it[ShowtimesTable.id] = id
             it[ShowtimesTable.theaterId] = theaterId
             it[ShowtimesTable.movieId] = movieId
-            it[ShowtimesTable.hall] = hall
+            it[ShowtimesTable.hallId] = hallId   // ✅
             it[ShowtimesTable.startTime] = startTime
         }
-        Showtime(id, theaterId, movieId, hall, startTime)
+        Showtime(id, theaterId, movieId, hallId, startTime)
     }
 
     fun listAll(): List<Showtime> = transaction {
@@ -42,11 +42,11 @@ class ShowtimesRepository {
             .singleOrNull()
     }
 
-    fun update(id: String, theaterId: String, movieId: Int, hall: String, startTime: String): Showtime? = transaction {
+    fun update(id: String, theaterId: String, movieId: Int, hallId: String, startTime: String): Showtime? = transaction {
         val updated = ShowtimesTable.update({ ShowtimesTable.id eq id }) {
             it[ShowtimesTable.theaterId] = theaterId
             it[ShowtimesTable.movieId] = movieId
-            it[ShowtimesTable.hall] = hall
+            it[ShowtimesTable.hallId] = hallId   // ✅
             it[ShowtimesTable.startTime] = startTime
         }
         if (updated > 0) {
