@@ -16,96 +16,53 @@ fun Route.showtimeRoutes(tmdbConfig: TmdbConfig, client: HttpClient) {
     val repo = ShowtimesRepository()
     val tmdbRepo = TmdbRepository(client, tmdbConfig)
 
+    suspend fun mapToDto(st: com.cinemapalace.domain.models.Showtime): ShowtimeWithMovie {
+        val movie = tmdbRepo.getMovieDetails(st.movieId.toString())
+        return ShowtimeWithMovie(
+            id = st.id,
+            theaterId = st.theaterId,
+            hallId = st.hallId,
+            startTime = st.startTime,
+            movie = MovieDto(
+                id = movie.id,
+                title = movie.title,
+                overview = movie.overview,
+                posterPath = movie.posterPath
+            )
+        )
+    }
+
     route("/showtimes") {
-
-        // ➕ Skapa en ny föreställning
         post {
-            val req = call.receive<CreateShowtimeRequest>()
-            val showtime = repo.create(req.theaterId, req.movieId, req.hall, req.startTime)
-            call.respond(showtime)
-        }
+        val req = call.receive<CreateShowtimeRequest>()
+        call.respond(repo.create(req.theaterId, req.movieId, req.hallId, req.startTime))
+    }
 
-        // 📋 Lista alla föreställningar (inkl. filmdata)
-        get {
-            val all = repo.listAll()
-            val result = all.map { st ->
-                val movie = tmdbRepo.getMovieDetails(st.movieId.toString())
-                ShowtimeWithMovie(
-                    id = st.id,
-                    theaterId = st.theaterId,
-                    hall = st.hall,
-                    startTime = st.startTime,
-                    movie = MovieDto(
-                        id = movie.id,
-                        title = movie.title,
-                        overview = movie.overview,
-                        posterPath = movie.posterPath
-                    )
-                )
-            }
-            call.respond(result)
-        }
+        get { call.respond(repo.listAll().map { mapToDto(it) }) }
 
-        // 🎭 Lista alla föreställningar för en specifik biograf
         get("/theater/{theaterId}") {
-            val theaterId = call.parameters["theaterId"]
-                ?: return@get call.respond(mapOf("error" to "Missing theaterId"))
-
-            val showtimes = repo.getByTheater(theaterId)
-            val result = showtimes.map { st ->
-                val movie = tmdbRepo.getMovieDetails(st.movieId.toString())
-                ShowtimeWithMovie(
-                    id = st.id,
-                    theaterId = st.theaterId,
-                    hall = st.hall,
-                    startTime = st.startTime,
-                    movie = MovieDto(
-                        id = movie.id,
-                        title = movie.title,
-                        overview = movie.overview,
-                        posterPath = movie.posterPath
-                    )
-                )
-            }
-            call.respond(result)
+            val theaterId = call.paramOrError("theaterId") ?: return@get
+            call.respond(repo.getByTheater(theaterId).map { mapToDto(it) })
         }
 
-        // 🔍 Hämta en specifik föreställning
         get("/{id}") {
-            val id = call.parameters["id"] ?: return@get call.respond(mapOf("error" to "Missing id"))
-            val showtime = repo.get(id) ?: return@get call.respond(mapOf("error" to "Not found"))
-            call.respond(showtime)
+            val id = call.paramOrError("id") ?: return@get
+            repo.get(id)?.let { call.respond(it) }
+                ?: call.respond(mapOf("error" to "Not found"))
         }
 
-        // ✏️ Uppdatera en föreställning
         put("/{id}") {
-            val id = call.parameters["id"]
-            if (id == null) {
-                call.respond(mapOf("error" to "Missing showtime id"))
-            } else {
-                val req = call.receive<CreateShowtimeRequest>()
-                val updated = repo.update(id, req.theaterId, req.movieId, req.hall, req.startTime)
-                if (updated != null) {
-                    call.respond(updated)
-                } else {
-                    call.respond(mapOf("status" to "not found", "id" to id))
-                }
-            }
+            val id = call.paramOrError("id") ?: return@put
+            val req = call.receive<CreateShowtimeRequest>()
+            repo.update(id, req.theaterId, req.movieId, req.hallId, req.startTime)
+                ?.let { call.respond(it) }
+                ?: call.respond(mapOf("status" to "not found", "id" to id))
         }
 
-        // ❌ Ta bort en föreställning
         delete("/{id}") {
-            val id = call.parameters["id"]
-            if (id == null) {
-                call.respond(mapOf("error" to "Missing showtime id"))
-            } else {
-                val deleted = repo.delete(id)
-                if (deleted) {
-                    call.respond(mapOf("status" to "deleted", "id" to id))
-                } else {
-                    call.respond(mapOf("status" to "not found", "id" to id))
-                }
-            }
+            val id = call.paramOrError("id") ?: return@delete
+            if (repo.delete(id)) call.respond(mapOf("status" to "deleted", "id" to id))
+            else call.respond(mapOf("status" to "not found", "id" to id))
         }
     }
 }
