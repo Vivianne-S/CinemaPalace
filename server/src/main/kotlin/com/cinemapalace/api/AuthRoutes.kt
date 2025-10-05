@@ -1,8 +1,8 @@
 package com.cinemapalace.api
 
-import com.cinemapalace.config.JwtConfig
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import com.cinemapalace.config.JwtConfig
 import com.cinemapalace.data.auth.UserRepository
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -15,7 +15,7 @@ import java.util.*
 fun Route.authRoutes(jwtConfig: JwtConfig) {
     val userRepository = UserRepository()
 
-    // ✅ Register
+    // 🧩 Register new user
     post("/register") {
         val request = call.receive<RegisterRequest>()
 
@@ -26,10 +26,10 @@ fun Route.authRoutes(jwtConfig: JwtConfig) {
         }
 
         val user = userRepository.createUser(request.name, request.email, request.password)
-        call.respond(AuthResponse(user.id, "User ${user.name} registered"))
+        call.respond(AuthResponse(user.id, "User ${user.name} registered successfully"))
     }
 
-    // ✅ Login with JWT
+    // 🔐 Login and issue JWT
     post("/login") {
         val request = call.receive<LoginRequest>()
         val user = userRepository.validateUser(request.email, request.password)
@@ -43,13 +43,13 @@ fun Route.authRoutes(jwtConfig: JwtConfig) {
             .withAudience(jwtConfig.audience)
             .withIssuer(jwtConfig.issuer)
             .withClaim("userId", user.id)
-            .withExpiresAt(Date(System.currentTimeMillis() + 3_600_000)) // 1 timme
+            .withExpiresAt(Date(System.currentTimeMillis() + 3_600_000)) // 1h
             .sign(Algorithm.HMAC256(jwtConfig.secret))
 
         call.respond(AuthResponse(token, "Login successful"))
     }
 
-    // ✅ Authenticated route
+    // 🔒 Authenticated endpoint
     authenticate("auth-jwt") {
         get("/me") {
             val principal = call.principal<JWTPrincipal>()
