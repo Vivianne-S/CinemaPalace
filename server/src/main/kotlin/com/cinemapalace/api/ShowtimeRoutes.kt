@@ -33,16 +33,31 @@ fun Route.showtimeRoutes(tmdbConfig: TmdbConfig, client: HttpClient) {
     }
 
     route("/showtimes") {
-        post {
-        val req = call.receive<CreateShowtimeRequest>()
-        call.respond(repo.create(req.theaterId, req.movieId, req.hallId, req.startTime))
-    }
 
-        get { call.respond(repo.listAll().map { mapToDto(it) }) }
+        post {
+            val req = call.receive<CreateShowtimeRequest>()
+            call.respond(repo.create(req.theaterId, req.movieId, req.hallId, req.startTime))
+        }
+
+        // ✅ GET – endast unika filmer
+        get {
+            val allShowtimes = repo.listAll()
+            val uniqueShowtimes = allShowtimes
+                .groupBy { it.movieId }
+                .map { (_, group) -> group.first() } // behåll endast en showtime per film
+
+            val mapped = uniqueShowtimes.map { mapToDto(it) }
+            call.respond(mapped)
+        }
 
         get("/theater/{theaterId}") {
             val theaterId = call.paramOrError("theaterId") ?: return@get
-            call.respond(repo.getByTheater(theaterId).map { mapToDto(it) })
+            val showtimes = repo.getByTheater(theaterId)
+                .groupBy { it.movieId }
+                .map { (_, group) -> group.first() } // samma fix även här
+                .map { mapToDto(it) }
+
+            call.respond(showtimes)
         }
 
         get("/{id}") {
@@ -61,8 +76,11 @@ fun Route.showtimeRoutes(tmdbConfig: TmdbConfig, client: HttpClient) {
 
         delete("/{id}") {
             val id = call.paramOrError("id") ?: return@delete
-            if (repo.delete(id)) call.respond(mapOf("status" to "deleted", "id" to id))
-            else call.respond(mapOf("status" to "not found", "id" to id))
+            if (repo.delete(id)) {
+                call.respond(mapOf("status" to "deleted", "id" to id))
+            } else {
+                call.respond(mapOf("status" to "not found", "id" to id))
+            }
         }
     }
 }

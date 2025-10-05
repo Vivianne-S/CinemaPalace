@@ -19,7 +19,8 @@ class TmdbRepository(
     suspend fun getPopularMovies(): TmdbMovieListResponse {
         val response: HttpResponse = client.get("${config.baseUrl}/movie/popular") {
             parameter("api_key", config.apiKey)
-            parameter("language", "en-US")
+            parameter("language", "sv-SE")
+            parameter("region", "SE")
         }
         val parsed = parseResponse(response, TmdbMovieListResponse::class.java)
         return parsed.copy(
@@ -35,7 +36,7 @@ class TmdbRepository(
     suspend fun searchMovies(query: String): TmdbMovieListResponse {
         val response: HttpResponse = client.get("${config.baseUrl}/search/movie") {
             parameter("api_key", config.apiKey)
-            parameter("language", "en-US")
+            parameter("language", "sv-SE")
             parameter("query", query)
         }
         val parsed = parseResponse(response, TmdbMovieListResponse::class.java)
@@ -52,12 +53,30 @@ class TmdbRepository(
     suspend fun getMovieDetails(id: String): TmdbMovieDetailResponse {
         val response: HttpResponse = client.get("${config.baseUrl}/movie/$id") {
             parameter("api_key", config.apiKey)
-            parameter("language", "en-US")
+            parameter("language", "sv-SE")
         }
         val parsed = parseResponse(response, TmdbMovieDetailResponse::class.java)
         return parsed.copy(
             posterPath = parsed.posterPath?.let { "$imageBaseUrl$it" },
             backdropPath = parsed.backdropPath?.let { "$imageBaseUrl$it" }
+        )
+    }
+
+    // 🔹 Hämta aktuella filmer som går på bio just nu (för SeedData)
+    suspend fun getNowPlayingMovies(): TmdbMovieListResponse {
+        val response: HttpResponse = client.get("${config.baseUrl}/movie/now_playing") {
+            parameter("api_key", config.apiKey)
+            parameter("language", "sv-SE")
+            parameter("region", "SE")
+        }
+        val parsed = parseResponse(response, TmdbMovieListResponse::class.java)
+        return parsed.copy(
+            results = parsed.results.map {
+                it.copy(
+                    posterPath = it.posterPath?.let { "$imageBaseUrl$it" },
+                    backdropPath = it.backdropPath?.let { "$imageBaseUrl$it" }
+                )
+            }
         )
     }
 
