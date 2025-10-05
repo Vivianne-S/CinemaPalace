@@ -17,11 +17,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
-import com.example.cinemapalace.data.model.MovieDto
+import com.example.cinemapalace.data.model.TmdbMovie
 
 @Composable
 fun MovieDetailsScreen(
-    movie: MovieDto,
+    movie: TmdbMovie,
     onBackClick: () -> Unit
 ) {
     val scrollState = rememberScrollState()
@@ -29,15 +29,21 @@ fun MovieDetailsScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFF0A0A0A), Color(0xFF181818))
-                )
-            )
-            .verticalScroll(scrollState)
+            .background(Color.Black)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // Enkel back-knapp utan TopAppBar
+        // 🔹 Scrollbart innehåll
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0xFF0A0A0A), Color(0xFF181818))
+                    )
+                )
+                .padding(bottom = 80.dp) // extra luft för fade
+        ) {
+            // 🔙 Back-knapp
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -53,7 +59,7 @@ fun MovieDetailsScreen(
                 }
             }
 
-            // Movie poster
+            // 🎬 Filmens poster
             Image(
                 painter = rememberAsyncImagePainter(
                     model = "https://image.tmdb.org/t/p/w500${movie.posterPath}"
@@ -65,39 +71,53 @@ fun MovieDetailsScreen(
                     .height(450.dp)
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // Movie details
-            Column(modifier = Modifier.padding(16.dp)) {
+            // 📄 Film-info
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
                 Text(
                     text = movie.title,
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = Color(0xFFFFC107)
                     )
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                movie.releaseDate?.let {
+                    Text(
+                        text = "Premiär: $it",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = Color.LightGray
+                        )
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = movie.overview,
+                    text = movie.overview.ifEmpty { "Ingen beskrivning tillgänglig." },
                     style = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
                     lineHeight = MaterialTheme.typography.bodyLarge.lineHeight
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // Book button
+                // 🎟️ Boka-knapp
                 Button(
-                    onClick = {
-                        // TODO: lägg till navigation till bokning här
-                    },
+                    onClick = { /* TODO: bokningsflöde */ },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFFFFC107)
-                    )
+                    ),
+                    shape = MaterialTheme.shapes.medium
                 ) {
                     Text(
                         text = "Boka biljetter 🎟️",
@@ -105,7 +125,22 @@ fun MovieDetailsScreen(
                         color = Color.Black
                     )
                 }
+
+                Spacer(modifier = Modifier.height(60.dp))
             }
         }
+
+        // 🔥 Fade-effekt längst ner
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp)
+                .align(Alignment.BottomCenter)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, Color(0xFF000000))
+                    )
+                )
+        )
     }
 }
