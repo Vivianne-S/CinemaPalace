@@ -73,6 +73,9 @@ dependencies {
     // 🧭 Navigation
     implementation("androidx.navigation:navigation-compose:2.8.2")
 
+    // Compose Material Icons
+    implementation("androidx.compose.material:material-icons-extended")
+
     // ✅ Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
