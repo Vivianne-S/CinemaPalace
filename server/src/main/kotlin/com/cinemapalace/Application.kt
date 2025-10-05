@@ -1,3 +1,4 @@
+// app/src/main/kotlin/com/cinemapalace/Application.kt
 package com.cinemapalace
 
 import com.cinemapalace.api.movieRoutes
@@ -15,19 +16,21 @@ import io.ktor.client.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
-import io.ktor.server.auth.*
-import io.ktor.server.auth.jwt.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.cinemapalace.api.seatSelectionRoutes
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 
 fun main() {
-    // 🔹 Ladda miljövariabler från .env
     val dotenv = dotenv {
         ignoreIfMissing = true
     }
@@ -35,7 +38,7 @@ fun main() {
         System.setProperty(entry.key, entry.value)
     }
 
-    embeddedServer(Netty, port = 8080) {
+    embeddedServer(Netty, port = 8080, host = "0.0.0.0") {
         module()
     }.start(wait = true)
 }
@@ -54,6 +57,17 @@ fun Application.module() {
                 configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
             }
         }
+    }
+
+    // ✅ CORS support för Android app
+    install(CORS) {
+        anyHost()
+        allowHeader(HttpHeaders.ContentType)
+        allowMethod(HttpMethod.Options)
+        allowMethod(HttpMethod.Get)
+        allowMethod(HttpMethod.Post)
+        allowMethod(HttpMethod.Put)
+        allowMethod(HttpMethod.Delete)
     }
 
     // ✅ Serverns ContentNegotiation
@@ -89,6 +103,9 @@ fun Application.module() {
             call.respond(mapOf("status" to "healthy"))
         }
 
+        // ⚠️ TA BORT denna temporära route - använd showtimeRoutes istället
+        // get("/showtimes") { ... }
+
         // Biograf-routes
         theaterRoutes()
 
@@ -101,7 +118,7 @@ fun Application.module() {
             get("/ping") { call.respond(mapOf("status" to "auth alive")) }
         }
 
-        // Showtimes-routes
+        // Showtimes-routes - ✅ Denna hanterar /showtimes
         showtimeRoutes(appConfig.tmdb, client)
 
         // Filmstaden-style routes

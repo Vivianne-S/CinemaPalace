@@ -1,19 +1,16 @@
 pluginManagement {
     repositories {
-        google {
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
-                includeGroupByRegex("androidx.*")
-            }
-        }
+        google()
         mavenCentral()
         gradlePluginPortal()
+        // 🧩 Nytt repo för Compose Compiler
+        maven("https://androidx.dev/storage/compose-compiler/repository/")
     }
 
-    // ✅ LÄGG TILL DETTA för att fixa plugin konflikten
     plugins {
-        id("org.jetbrains.kotlin.jvm") version "1.9.0"
+        id("com.android.application") version "8.7.1"
+        id("org.jetbrains.kotlin.android") version "1.9.24"
+        id("org.jetbrains.kotlin.jvm") version "1.9.24"
     }
 }
 
@@ -22,6 +19,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // 🧩 Lägg även här
+        maven("https://androidx.dev/storage/compose-compiler/repository/")
     }
 }
 

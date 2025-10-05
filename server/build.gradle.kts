@@ -9,6 +9,7 @@ dependencies {
     implementation("io.ktor:ktor-server-netty:2.3.9")
     implementation("io.ktor:ktor-server-content-negotiation:2.3.9")
     implementation("io.ktor:ktor-serialization-jackson:2.3.9")
+    implementation("io.ktor:ktor-server-cors:2.3.9")
 
     // 🔹 Logging
     implementation("ch.qos.logback:logback-classic:1.4.14")
@@ -37,6 +38,7 @@ dependencies {
     implementation("io.ktor:ktor-server-auth:2.3.9")
     implementation("io.ktor:ktor-server-auth-jwt:2.3.9")
     implementation("com.auth0:java-jwt:4.4.0")
+    implementation("io.ktor:ktor-server-cors:2.3.9")
 
     // 🔹 Test
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
