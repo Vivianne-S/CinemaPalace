@@ -67,4 +67,19 @@ class ShowtimesRepository {
     fun delete(id: String): Boolean = transaction {
         ShowtimesTable.deleteWhere { ShowtimesTable.id eq id } > 0
     }
+    // 🔹 Ny metod: lista alla visningar grupperade per biograf
+    fun getGroupedShowtimes(): List<Map<String, Any>> = transaction {
+        (com.cinemapalace.database.ShowtimesTable innerJoin com.cinemapalace.database.TheatersTable innerJoin com.cinemapalace.database.HallsTable)
+            .selectAll()
+            .orderBy(com.cinemapalace.database.ShowtimesTable.startTime, SortOrder.ASC)
+            .map {
+                mapOf(
+                    "theaterName" to it[com.cinemapalace.database.TheatersTable.name],
+                    "hallName" to it[com.cinemapalace.database.HallsTable.name],
+                    "totalSeats" to it[com.cinemapalace.database.HallsTable.totalSeats],
+                    "availableSeats" to 250, // 💡 placeholder tills SeatBookings är kopplat
+                    "time" to it[com.cinemapalace.database.ShowtimesTable.startTime]
+                )
+            }
+    }
 }

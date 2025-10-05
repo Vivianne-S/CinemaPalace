@@ -44,6 +44,13 @@ android {
     }
 }
 
+// 🧹 Fixar Guava-konflikten mellan AndroidX & Ktor-libs
+configurations.all {
+    resolutionStrategy {
+        force("com.google.guava:guava:32.1.1-jre")
+    }
+}
+
 dependencies {
     // 🧩 Jetpack Compose BOM
     val composeBom = platform("androidx.compose:compose-bom:2024.05.00")
@@ -73,7 +80,7 @@ dependencies {
     // 🧭 Navigation
     implementation("androidx.navigation:navigation-compose:2.8.2")
 
-    // Compose Material Icons
+    // 🎨 Material Icons
     implementation("androidx.compose.material:material-icons-extended")
 
     // ✅ Testing

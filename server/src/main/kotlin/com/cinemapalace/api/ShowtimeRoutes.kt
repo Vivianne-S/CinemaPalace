@@ -1,86 +1,146 @@
 package com.cinemapalace.api
 
-import com.cinemapalace.data.showtime.ShowtimesRepository
-import com.cinemapalace.domain.models.CreateShowtimeRequest
-import com.cinemapalace.domain.models.ShowtimeWithMovie
-import com.cinemapalace.domain.models.MovieDto
 import com.cinemapalace.config.TmdbConfig
 import com.cinemapalace.data.movie.TmdbRepository
+import com.cinemapalace.data.showtime.ShowtimesRepository
+import com.cinemapalace.database.HallsTable
+import com.cinemapalace.database.ShowtimesTable
+import com.cinemapalace.database.TheatersTable
+import com.cinemapalace.domain.models.*
 import io.ktor.client.*
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.innerJoin
+import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.transactions.transaction
 
 fun Route.showtimeRoutes(tmdbConfig: TmdbConfig, client: HttpClient) {
     val repo = ShowtimesRepository()
-    val tmdbRepo = TmdbRepository(client, tmdbConfig)
-
-    suspend fun mapToDto(st: com.cinemapalace.domain.models.Showtime): ShowtimeWithMovie {
-        val movie = tmdbRepo.getMovieDetails(st.movieId.toString())
-        return ShowtimeWithMovie(
-            id = st.id,
-            theaterId = st.theaterId,
-            hallId = st.hallId,
-            startTime = st.startTime,
-            movie = MovieDto(
-                id = movie.id,
-                title = movie.title,
-                overview = movie.overview,
-                posterPath = movie.posterPath
-            )
-        )
-    }
+    val tmdb = TmdbRepository(client, tmdbConfig)
 
     route("/showtimes") {
 
-        post {
-            val req = call.receive<CreateShowtimeRequest>()
-            call.respond(repo.create(req.theaterId, req.movieId, req.hallId, req.startTime))
-        }
-
-        // ✅ GET – endast unika filmer
+        // --- GET: lista alla visningar ---
         get {
-            val allShowtimes = repo.listAll()
-            val uniqueShowtimes = allShowtimes
-                .groupBy { it.movieId }
-                .map { (_, group) -> group.first() } // behåll endast en showtime per film
-
-            val mapped = uniqueShowtimes.map { mapToDto(it) }
-            call.respond(mapped)
+            val all = repo.listAll()
+            call.respond(all)
         }
 
-        get("/theater/{theaterId}") {
-            val theaterId = call.paramOrError("theaterId") ?: return@get
-            val showtimes = repo.getByTheater(theaterId)
-                .groupBy { it.movieId }
-                .map { (_, group) -> group.first() } // samma fix även här
-                .map { mapToDto(it) }
-
-            call.respond(showtimes)
+        // --- GET: hämta en specifik visning ---
+        get("{id}") {
+            val id = call.parameters["id"]
+            val showtime = id?.let { repo.get(it) }
+            if (showtime != null) call.respond(showtime)
+            else call.respond(HttpStatusCode.NotFound, "Visningen hittades inte")
         }
 
-        get("/{id}") {
-            val id = call.paramOrError("id") ?: return@get
-            repo.get(id)?.let { call.respond(it) }
-                ?: call.respond(mapOf("error" to "Not found"))
-        }
-
-        put("/{id}") {
-            val id = call.paramOrError("id") ?: return@put
-            val req = call.receive<CreateShowtimeRequest>()
-            repo.update(id, req.theaterId, req.movieId, req.hallId, req.startTime)
-                ?.let { call.respond(it) }
-                ?: call.respond(mapOf("status" to "not found", "id" to id))
-        }
-
-        delete("/{id}") {
-            val id = call.paramOrError("id") ?: return@delete
-            if (repo.delete(id)) {
-                call.respond(mapOf("status" to "deleted", "id" to id))
-            } else {
-                call.respond(mapOf("status" to "not found", "id" to id))
+        // --- GET: alla visningar för ett film-ID ---
+        get("movie/{movieId}") {
+            val movieIdParam = call.parameters["movieId"]
+            if (movieIdParam == null) {
+                call.respond(HttpStatusCode.BadRequest, "Ogiltigt film-ID")
+                return@get
             }
+
+            try {
+                val movieId = movieIdParam.toInt()
+                val showtimes = repo.listAll().filter { it.movieId == movieId }
+                val movieDetails = tmdb.getMovieDetails(movieIdParam)
+
+                val result = showtimes.map {
+                    ShowtimeWithMovie(
+                        id = it.id,
+                        theaterId = it.theaterId,
+                        hallId = it.hallId,
+                        startTime = it.startTime,
+                        movie = MovieDto(
+                            id = movieDetails.id,
+                            title = movieDetails.title,
+                            overview = movieDetails.overview,
+                            posterPath = movieDetails.posterPath
+                        )
+                    )
+                }
+
+                call.respond(result)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                call.respond(HttpStatusCode.InternalServerError, "Kunde inte hämta visningar: ${e.message}")
+            }
+        }
+
+        // --- POST: skapa ny visning ---
+        post {
+            try {
+                val body = call.receive<CreateShowtimeRequest>()
+                val created = repo.create(
+                    theaterId = body.theaterId,
+                    movieId = body.movieId,
+                    hallId = body.hallId,
+                    startTime = body.startTime
+                )
+                call.respond(HttpStatusCode.Created, created)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                call.respond(HttpStatusCode.BadRequest, "Fel vid skapande av visning: ${e.message}")
+            }
+        }
+
+        // --- PUT: uppdatera befintlig visning ---
+        put("{id}") {
+            val id = call.parameters["id"]
+            if (id == null) {
+                call.respond(HttpStatusCode.BadRequest, "Saknar ID")
+                return@put
+            }
+
+            val body = call.receive<Showtime>()
+            val updated = repo.update(
+                id = id,
+                theaterId = body.theaterId,
+                movieId = body.movieId,
+                hallId = body.hallId,
+                startTime = body.startTime
+            )
+
+            if (updated != null) call.respond(updated)
+            else call.respond(HttpStatusCode.NotFound, "Visningen finns inte")
+        }
+
+        // --- DELETE: ta bort visning ---
+        delete("{id}") {
+            val id = call.parameters["id"]
+            if (id == null) {
+                call.respond(HttpStatusCode.BadRequest, "Saknar ID")
+                return@delete
+            }
+
+            val deleted = repo.delete(id)
+            if (deleted) call.respond(HttpStatusCode.OK, "Borttagen")
+            else call.respond(HttpStatusCode.NotFound, "Visningen hittades inte")
+        }
+
+        // --- Gruppvisningar per biograf ---
+        get("grouped") {
+            val showtimes = transaction {
+                (ShowtimesTable innerJoin TheatersTable innerJoin HallsTable)
+                    .selectAll()
+                    .orderBy(ShowtimesTable.startTime, SortOrder.ASC)
+                    .map {
+                        mapOf(
+                            "theaterName" to it[TheatersTable.name],
+                            "hallName" to it[HallsTable.name],
+                            "totalSeats" to (it[HallsTable.rows] * it[HallsTable.cols]),
+                            "availableSeats" to 250,
+                            "time" to it[ShowtimesTable.startTime]
+                        )
+                    }
+            }
+            call.respond(showtimes)
         }
     }
 }
