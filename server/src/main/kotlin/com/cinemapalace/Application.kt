@@ -1,14 +1,9 @@
-// app/src/main/kotlin/com/cinemapalace/Application.kt
 package com.cinemapalace
 
-import com.cinemapalace.api.movieRoutes
-import com.cinemapalace.api.authRoutes
-import com.cinemapalace.api.theaterRoutes
-import com.cinemapalace.api.showtimeRoutes
-import com.cinemapalace.api.seatBookingRoutes
-import com.cinemapalace.api.hallRoutes
+import com.cinemapalace.api.*
 import com.cinemapalace.config.AppConfig
 import com.cinemapalace.database.DatabaseFactory
+import com.cinemapalace.seed.SeedData
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.SerializationFeature
 import io.github.cdimascio.dotenv.dotenv
@@ -16,19 +11,18 @@ import io.ktor.client.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.http.*
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
-import com.cinemapalace.api.seatSelectionRoutes
-import io.ktor.server.auth.*
-import io.ktor.server.auth.jwt.*
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
+import com.cinemapalace.data.showtime.ShowtimesRepository
 
 fun main() {
     val dotenv = dotenv {
@@ -97,14 +91,22 @@ fun Application.module() {
         }
     }
 
+    // ✅ SeedData körs bara första gången (när DB är tom)
+    val showtimeRepo = ShowtimesRepository()
+    val existing = showtimeRepo.listAll()
+
+    if (existing.isEmpty()) {
+        println("🌱 Ingen data hittades i databasen – kör SeedData...")
+        SeedData.populate(appConfig.tmdb, client)
+    } else {
+        println("✅ Databasen innehåller redan ${existing.size} showtimes – seed hoppas över.")
+    }
+
     // ✅ Routing
     routing {
         get("/health") {
             call.respond(mapOf("status" to "healthy"))
         }
-
-        // ⚠️ TA BORT denna temporära route - använd showtimeRoutes istället
-        // get("/showtimes") { ... }
 
         // Biograf-routes
         theaterRoutes()
